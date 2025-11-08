@@ -121,6 +121,16 @@ public:
 
     virtual void on_piece_completed(tr_piece_index_t) = 0;
 
+    [[nodiscard]] constexpr auto is_filtered() const noexcept
+    {
+        return is_filtered_;
+    }
+    
+    constexpr void set_filtered(bool filtered) noexcept
+    {
+        is_filtered_ = filtered;
+    }
+
     static tr_peerMsgs* create(
         tr_torrent& torrent,
         std::shared_ptr<tr_peer_info> peer_info,
@@ -190,6 +200,9 @@ private:
 
     // whether or not we should free this peer soon.
     bool is_disconnecting_ = false;
+
+    // whether or not this peer has been filtered by peer ID lists
+    bool is_filtered_ = false;
 };
 
 /* @} */

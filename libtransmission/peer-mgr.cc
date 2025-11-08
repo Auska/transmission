@@ -1484,8 +1484,16 @@ void create_bit_torrent_peer(
         if (shouldChokePeerBasedOnFilters(std::string_view{ result.peer_id->data(), result.peer_id->size() }, swarm->tor->session))
         {
             tr_logAddTraceSwarm(swarm, fmt::format("Filtering peer {} due to peer ID filter", info->display_name()));
-            info->ban(); // Use ban mechanism to prevent future connections
-            return false;
+            // Instead of banning, we'll create the peer but immediately choke it
+            result.io->set_bandwidth(&swarm->tor->bandwidth());
+            create_bit_torrent_peer(*swarm->tor, result.io, std::move(info), client);
+            // Choke the peer immediately after creation and mark it as filtered
+            if (!swarm->peers.empty()) {
+                auto* peer = swarm->peers.back();
+                peer->set_choke(true);
+                peer->set_filtered(true);
+            }
+            return true;
         }
     }
 
@@ -2168,6 +2176,11 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
             /* choke everyone if we're not uploading */
             peer->set_choke(true);
         }
+        else if (peer->is_filtered())
+        {
+            /* choke filtered peers */
+            peer->set_choke(true);
+        }
         else if (peer != s->optimistic)
         {
             choked.emplace_back(
@@ -2224,7 +2237,8 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
 
         for (auto i = checked_choke_count, n = std::size(choked); i < n; ++i)
         {
-            if (choked[i].is_interested_)
+            // Skip filtered peers for optimistic unchoking
+            if (choked[i].is_interested_ && !choked[i].msgs_->is_filtered())
             {
                 rand_pool.push_back(&choked[i]);
             }
@@ -2241,7 +2255,12 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
 
     for (auto& item : choked)
     {
-        item.msgs_->set_choke(item.is_choked_);
+        // Ensure filtered peers remain choked
+        if (item.msgs_->is_filtered()) {
+            item.msgs_->set_choke(true);
+        } else {
+            item.msgs_->set_choke(item.is_choked_);
+        }
     }
 }
 } // namespace rechoke_uploads_helpers
