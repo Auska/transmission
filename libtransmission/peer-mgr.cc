@@ -1316,6 +1316,55 @@ namespace
 {
 namespace handshake_helpers
 {
+// Check if peer should be choked based on include/exclude lists
+[[nodiscard]] bool shouldChokePeerBasedOnFilters(std::string_view client_name, tr_session const* session)
+{
+    // Check if a client name matches any filter in a comma-separated list
+    // For client names, we check if the client name starts with the filter pattern
+    auto const matchesFilterList = [](std::string_view client_name, std::string_view filter_list) -> bool
+    {
+        if (filter_list.empty())
+        {
+            return false;
+        }
+
+        auto remaining = filter_list;
+        size_t pos = 0;
+
+        // Process each filter in the comma-separated list
+        while ((pos = remaining.find(',')) != std::string_view::npos)
+        {
+            auto filter = remaining.substr(0, pos);
+            if (!filter.empty() && client_name.substr(0, filter.size()) == filter)
+            {
+                return true;
+            }
+            remaining = remaining.substr(pos + 1);
+        }
+
+        // Check the last (or only) filter
+        return !remaining.empty() && client_name.substr(0, remaining.size()) == remaining;
+    };
+    
+    auto const& include_list = session->peerIdIncludeList();
+    auto const& exclude_list = session->peerIdExcludeList();
+    
+    // If exclude list is not empty, block peers in the list
+    if (!exclude_list.empty())
+    {
+        return matchesFilterList(client_name, exclude_list);
+    }
+    
+    // If include list is not empty, only allow peers in the list
+    if (!include_list.empty())
+    {
+        return !matchesFilterList(client_name, include_list);
+    }
+    
+    // Neither list exists: don't choke
+    return false;
+}
+
 void create_bit_torrent_peer(
     tr_torrent& tor,
     std::shared_ptr<tr_peerIo> io,
@@ -1430,6 +1479,14 @@ void create_bit_torrent_peer(
         auto buf = std::array<char, 128>{};
         tr_clientForId(std::data(buf), sizeof(buf), *result.peer_id);
         client = tr_interned_string{ tr_quark_new(std::data(buf)) };
+        
+                // Check if peer should be filtered based on raw peer ID
+        if (shouldChokePeerBasedOnFilters(std::string_view{ result.peer_id->data(), result.peer_id->size() }, swarm->tor->session))
+        {
+            tr_logAddTraceSwarm(swarm, fmt::format("Filtering peer {} due to peer ID filter", info->display_name()));
+            info->ban(); // Use ban mechanism to prevent future connections
+            return false;
+        }
     }
 
     result.io->set_bandwidth(&swarm->tor->bandwidth());
