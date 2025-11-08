@@ -224,6 +224,8 @@ enum // NOLINT(performance-enum-size)
     TR_KEY_paused,
     TR_KEY_pausedTorrentCount,
     TR_KEY_peer_congestion_algorithm,
+    TR_KEY_peer_id_exclude_list,
+    TR_KEY_peer_id_include_list,
     TR_KEY_peer_limit,
     TR_KEY_peer_limit_global,
     TR_KEY_peer_limit_per_torrent,

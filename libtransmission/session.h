@@ -440,6 +440,8 @@ public:
         std::string download_dir = tr_getDefaultDownloadDir();
         std::string incomplete_dir = tr_getDefaultDownloadDir();
         std::string peer_congestion_algorithm;
+        std::string peer_id_include_list;
+        std::string peer_id_exclude_list;
         std::string script_torrent_added_filename;
         std::string script_torrent_done_filename;
         std::string script_torrent_done_seeding_filename;
@@ -452,7 +454,6 @@ public:
         tr_port peer_port = tr_port::from_host(TrDefaultPeerPort);
         tr_tos_t peer_socket_tos{ 0x04 };
         tr_verify_added_mode torrent_added_verify_mode = TR_VERIFY_ADDED_FAST;
-
     private:
         [[nodiscard]] Fields fields() override
         {
@@ -485,6 +486,8 @@ public:
                 { TR_KEY_peer_port_random_on_start, &peer_port_random_on_start },
                 { TR_KEY_peer_socket_tos, &peer_socket_tos },
                 { TR_KEY_pex_enabled, &pex_enabled },
+                { TR_KEY_peer_id_include_list, &peer_id_include_list },
+                { TR_KEY_peer_id_exclude_list, &peer_id_exclude_list },
                 { TR_KEY_port_forwarding_enabled, &port_forwarding_enabled },
                 { TR_KEY_preallocation, &preallocation_mode },
                 { TR_KEY_preferred_transport, &preferred_transport },
@@ -993,6 +996,27 @@ public:
     [[nodiscard]] constexpr auto const& preferred_transport() const noexcept
     {
         return settings().preferred_transport;
+    }
+
+    // peer ID include/exclude lists
+    [[nodiscard]] constexpr std::string const& peerIdIncludeList() const noexcept
+    {
+        return settings().peer_id_include_list;
+    }
+
+    [[nodiscard]] constexpr std::string const& peerIdExcludeList() const noexcept
+    {
+        return settings().peer_id_exclude_list;
+    }
+
+    void setPeerIdIncludeList(std::string_view list)
+    {
+        settings_.peer_id_include_list = list;
+    }
+
+    void setPeerIdExcludeList(std::string_view list)
+    {
+        settings_.peer_id_exclude_list = list;
     }
 
     [[nodiscard]] constexpr auto isIdleLimited() const noexcept
