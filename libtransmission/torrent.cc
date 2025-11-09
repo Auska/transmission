@@ -440,8 +440,16 @@ void tr_torrent::stop_if_seed_limit_reached()
         return;
     }
 
+    /* if the seed ratio is 0, stop the torrent immediately */
+    if (auto const seed_ratio = effective_seed_ratio(); seed_ratio && (*seed_ratio == 0.0))
+    {
+        tr_logAddInfoTor(this, _("Seed ratio is -1 or 0; pausing torrent"));
+        stop_soon();
+        session->onRatioLimitHit(this);
+    }
+
     /* if we're seeding and reach our seed ratio limit, stop the torrent */
-    if (tr_torrentIsSeedRatioDone(this))
+    else if (tr_torrentIsSeedRatioDone(this))
     {
         tr_logAddInfoTor(this, _("Seed ratio reached; pausing torrent"));
         stop_soon();
