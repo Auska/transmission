@@ -519,8 +519,14 @@ void tr_torrentCheckSeedLimit(tr_torrent* tor)
         return;
     }
 
-    /* if we're seeding and reach our seed ratio limit, stop the torrent */
-    if (tr_torrentIsSeedRatioDone(tor))
+    /* check if the seed ratio is 0 or if we've reached our seed ratio limit */
+    if (auto seed_ratio = double{}; tr_torrentGetSeedRatio(tor, &seed_ratio) && seed_ratio == 0.0)
+    {
+        tr_logAddInfoTor(tor, _("Seed ratio is 0; pausing torrent"));
+        tor->isStopping = true;
+        tor->session->onRatioLimitHit(tor);
+    }
+    else if (tr_torrentIsSeedRatioDone(tor))
     {
         tr_logAddInfoTor(tor, _("Seed ratio reached; pausing torrent"));
         tor->isStopping = true;

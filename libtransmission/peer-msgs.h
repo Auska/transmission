@@ -71,6 +71,16 @@ public:
 
     virtual void on_piece_completed(tr_piece_index_t) = 0;
 
+    [[nodiscard]] constexpr auto is_filtered() const noexcept
+    {
+        return is_filtered_;
+    }
+    
+    constexpr void set_filtered(bool filtered) noexcept
+    {
+        is_filtered_ = filtered;
+    }
+
     /// The client name. This is the app name derived from the `v` string in LTEP's handshake dictionary
     tr_interned_string client;
 
@@ -78,6 +88,9 @@ protected:
     tr_bitfield have_;
 
 private:
+    // whether or not this peer has been filtered by peer ID lists
+    bool is_filtered_ = false;
+    
     static inline auto n_peers = std::atomic<size_t>{};
 };
 

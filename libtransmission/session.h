@@ -486,6 +486,27 @@ public:
         settings_.peer_congestion_algorithm = algorithm;
     }
 
+    // peer ID include/exclude lists
+    [[nodiscard]] constexpr std::string const& peerIdIncludeList() const noexcept
+    {
+        return settings_.peer_id_include_list;
+    }
+
+    [[nodiscard]] constexpr std::string const& peerIdExcludeList() const noexcept
+    {
+        return settings_.peer_id_exclude_list;
+    }
+
+    void setPeerIdIncludeList(std::string_view list)
+    {
+        settings_.peer_id_include_list = list;
+    }
+
+    void setPeerIdExcludeList(std::string_view list)
+    {
+        settings_.peer_id_exclude_list = list;
+    }
+
     void setSocketTOS(tr_socket_t sock, tr_address_type type) const
     {
         tr_netSetTOS(sock, settings_.peer_socket_tos, type);
