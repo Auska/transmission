@@ -1326,6 +1326,58 @@ namespace
 {
 namespace handshake_helpers
 {
+
+// Check if peer should be choked based on include/exclude lists
+[[nodiscard]] bool shouldChokePeerBasedOnFilters(std::string_view peer_id_data, tr_session const* session)
+{
+    auto const matchesFilterList = [](std::string_view peer_id_data, std::string_view filter_list) -> bool
+    {
+        if (filter_list.empty())
+        {
+            return false;
+        }
+
+        auto remaining = filter_list;
+
+        for (;;)
+        {
+            auto const pos = remaining.find(',');
+            auto const filter = remaining.substr(0, pos);
+            if (!filter.empty() && peer_id_data.substr(0, std::size(filter)) == filter)
+            {
+                return true;
+            }
+
+            if (pos == std::string_view::npos)
+            {
+                break;
+            }
+
+            remaining = remaining.substr(pos + 1);
+        }
+
+        return false;
+    };
+
+    auto const& include_list = session->peerIdIncludeList();
+    auto const& exclude_list = session->peerIdExcludeList();
+
+    // If exclude list is not empty, block peers in the list
+    if (!exclude_list.empty())
+    {
+        return matchesFilterList(peer_id_data, exclude_list);
+    }
+
+    // If include list is not empty, only allow peers in the list
+    if (!include_list.empty())
+    {
+        return !matchesFilterList(peer_id_data, include_list);
+    }
+
+    // Neither list exists: don't choke
+    return false;
+}
+
 void create_bit_torrent_peer(
     tr_torrent& tor,
     std::shared_ptr<tr_peerIo> io,
@@ -1436,6 +1488,21 @@ void create_bit_torrent_peer(
 
     result.io->set_bandwidth(&swarm->tor->bandwidth());
     create_bit_torrent_peer(*swarm->tor, result.io, std::move(info), result.peer_id.value_or(tr_peer_id_t{}));
+
+    // Check if peer should be filtered based on peer ID include/exclude lists
+    if (result.peer_id && !swarm->peers.empty())
+    {
+        auto const peer_id_sv = std::string_view{ result.peer_id->data(), result.peer_id->size() };
+        if (shouldChokePeerBasedOnFilters(peer_id_sv, swarm->tor->session))
+        {
+            auto* const peer = swarm->peers.back();
+            peer->set_choke(true);
+            peer->set_filtered(true);
+            tr_logAddTraceSwarm(
+                swarm,
+                fmt::format("Filtering peer {} due to peer ID filter", peer->peer_info->display_name()));
+        }
+    }
 
     return true;
 }
@@ -2117,6 +2184,11 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
             /* choke everyone if we're not uploading */
             peer->set_choke(true);
         }
+        else if (peer->is_filtered())
+        {
+            /* choke filtered peers */
+            peer->set_choke(true);
+        }
         else if (peer.get() != s->optimistic)
         {
             choked.emplace_back(
@@ -2173,7 +2245,7 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
 
         for (auto i = checked_choke_count, n = std::size(choked); i < n; ++i)
         {
-            if (choked[i].is_interested_)
+            if (choked[i].is_interested_ && !choked[i].msgs_->is_filtered())
             {
                 rand_pool.push_back(&choked[i]);
             }
@@ -2190,7 +2262,15 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
 
     for (auto& item : choked)
     {
-        item.msgs_->set_choke(item.is_choked_);
+        // Ensure filtered peers remain choked
+        if (item.msgs_->is_filtered())
+        {
+            item.msgs_->set_choke(true);
+        }
+        else
+        {
+            item.msgs_->set_choke(item.is_choked_);
+        }
     }
 }
 } // namespace rechoke_uploads_helpers
