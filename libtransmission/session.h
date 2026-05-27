@@ -471,6 +471,8 @@ public:
         std::string download_dir = tr_getDefaultDownloadDir();
         std::string incomplete_dir = tr_getDefaultDownloadDir();
         std::string peer_congestion_algorithm;
+        std::string peer_id_exclude_list;
+        std::string peer_id_include_list;
         std::string script_torrent_added_filename;
         std::string script_torrent_done_filename;
         std::string script_torrent_done_seeding_filename;
@@ -746,6 +748,16 @@ public:
     [[nodiscard]] constexpr auto const& peerCongestionAlgorithm() const noexcept
     {
         return settings().peer_congestion_algorithm;
+    }
+
+    [[nodiscard]] constexpr auto const& peerIdExcludeList() const noexcept
+    {
+        return settings().peer_id_exclude_list;
+    }
+
+    [[nodiscard]] constexpr auto const& peerIdIncludeList() const noexcept
+    {
+        return settings().peer_id_include_list;
     }
 
     void setSocketDiffServ(tr_socket_t sock, tr_address_type type) const

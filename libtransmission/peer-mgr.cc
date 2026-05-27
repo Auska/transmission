@@ -1495,7 +1495,7 @@ void create_bit_torrent_peer(
         auto const peer_id_sv = std::string_view{ result.peer_id->data(), result.peer_id->size() };
         if (shouldChokePeerBasedOnFilters(peer_id_sv, swarm->tor->session))
         {
-            auto* const peer = swarm->peers.back();
+            auto const& peer = swarm->peers.back();
             peer->set_choke(true);
             peer->set_filtered(true);
             tr_logAddTraceSwarm(
