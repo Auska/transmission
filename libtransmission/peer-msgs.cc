@@ -1499,6 +1499,10 @@ ReadResult tr_peerMsgsImpl::process_peer_message(uint8_t id, MessageReader& payl
         {
             have_.set(ui32);
             peer_info->set_seed(is_seed());
+            if (peer_info->is_seed())
+            {
+                set_filtered(false);
+            }
             publish(tr_peer_event::GotHave(ui32));
         }
 
@@ -1509,6 +1513,10 @@ ReadResult tr_peerMsgsImpl::process_peer_message(uint8_t id, MessageReader& payl
         have_ = tr_bitfield{ tor_.has_metainfo() ? tor_.piece_count() : std::size(payload) * 8 };
         have_.set_raw(reinterpret_cast<uint8_t const*>(std::data(payload)), std::size(payload));
         peer_info->set_seed(is_seed());
+        if (peer_info->is_seed())
+        {
+            set_filtered(false);
+        }
         publish(tr_peer_event::GotBitfield(&have_));
         break;
 
@@ -1609,6 +1617,7 @@ ReadResult tr_peerMsgsImpl::process_peer_message(uint8_t id, MessageReader& payl
         {
             have_.set_has_all();
             peer_info->set_seed();
+            set_filtered(false);
             publish(tr_peer_event::GotHaveAll());
         }
         else
