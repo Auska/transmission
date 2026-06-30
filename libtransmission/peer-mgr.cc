@@ -1330,7 +1330,7 @@ namespace handshake_helpers
 // Check if peer should be choked based on include/exclude lists
 [[nodiscard]] bool shouldChokePeerBasedOnFilters(std::string_view peer_id_data, tr_session const* session)
 {
-    auto const matchesFilterList = [](std::string_view peer_id_data, std::string_view filter_list) -> bool
+    auto const matchesFilterList = [](std::string_view data, std::string_view filter_list) -> bool
     {
         if (filter_list.empty())
         {
@@ -1343,7 +1343,7 @@ namespace handshake_helpers
         {
             auto const pos = remaining.find(',');
             auto const filter = remaining.substr(0, pos);
-            if (!filter.empty() && peer_id_data.substr(0, std::size(filter)) == filter)
+            if (!filter.empty() && data.substr(0, std::size(filter)) == filter)
             {
                 return true;
             }
