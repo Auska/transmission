@@ -1343,7 +1343,7 @@ namespace handshake_helpers
         {
             auto const pos = remaining.find(',');
             auto const filter = remaining.substr(0, pos);
-            if (!filter.empty() && data.substr(0, std::size(filter)) == filter)
+            if (!filter.empty() && data.compare(0, std::size(filter), filter) == 0)
             {
                 return true;
             }
@@ -1361,6 +1361,14 @@ namespace handshake_helpers
 
     auto const& include_list = session->peerIdIncludeList();
     auto const& exclude_list = session->peerIdExcludeList();
+
+    // Both lists are set: exclude list takes priority
+    if (!exclude_list.empty() && !include_list.empty())
+    {
+        tr_logAddWarn(
+            "Both peer_id_include_list and peer_id_exclude_list are set; "
+            "exclude list takes priority and include list is ignored");
+    }
 
     // If exclude list is not empty, block peers in the list
     if (!exclude_list.empty())
@@ -1498,9 +1506,7 @@ void create_bit_torrent_peer(
             auto const& peer = swarm->peers.back();
             peer->set_choke(true);
             peer->set_filtered(true);
-            tr_logAddTraceSwarm(
-                swarm,
-                fmt::format("Filtering peer {} due to peer ID filter", peer->peer_info->display_name()));
+            tr_logAddTraceSwarm(swarm, fmt::format("Filtering peer {} due to peer ID filter", peer->peer_info->display_name()));
         }
     }
 
@@ -2186,8 +2192,9 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
         }
         else if (peer->is_filtered())
         {
-            /* choke filtered peers */
+            /* choke filtered peers; skip unchoke consideration */
             peer->set_choke(true);
+            continue;
         }
         else if (peer.get() != s->optimistic)
         {
@@ -2245,7 +2252,7 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
 
         for (auto i = checked_choke_count, n = std::size(choked); i < n; ++i)
         {
-            if (choked[i].is_interested_ && !choked[i].msgs_->is_filtered())
+            if (choked[i].is_interested_)
             {
                 rand_pool.push_back(&choked[i]);
             }
@@ -2262,15 +2269,7 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
 
     for (auto& item : choked)
     {
-        // Ensure filtered peers remain choked
-        if (item.msgs_->is_filtered())
-        {
-            item.msgs_->set_choke(true);
-        }
-        else
-        {
-            item.msgs_->set_choke(item.is_choked_);
-        }
+        item.msgs_->set_choke(item.is_choked_);
     }
 }
 } // namespace rechoke_uploads_helpers

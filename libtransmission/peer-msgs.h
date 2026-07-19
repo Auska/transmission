@@ -125,6 +125,14 @@ public:
         is_filtered_ = filtered;
     }
 
+    void clear_filter_if_seed() noexcept
+    {
+        if (peer_info->is_seed())
+        {
+            is_filtered_ = false;
+        }
+    }
+
     [[nodiscard]] virtual tr_socket_address socket_address() const = 0;
 
     virtual void set_choke(bool peer_is_choked) = 0;
