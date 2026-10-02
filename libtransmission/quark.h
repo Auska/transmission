@@ -380,6 +380,8 @@ enum // NOLINT(performance-enum-size)
     TR_KEY_peer_is_interested_camel_APICOMPAT,
     TR_KEY_peer_congestion_algorithm,
     TR_KEY_peer_id,
+    TR_KEY_peer_id_exclude_list,
+    TR_KEY_peer_id_include_list,
     TR_KEY_peer_is_choked,
     TR_KEY_peer_is_interested,
     TR_KEY_peer_limit,

@@ -1326,6 +1326,66 @@ namespace
 {
 namespace handshake_helpers
 {
+
+// Check if peer should be choked based on include/exclude lists
+[[nodiscard]] bool shouldChokePeerBasedOnFilters(std::string_view peer_id_data, tr_session const* session)
+{
+    auto const matchesFilterList = [](std::string_view data, std::string_view filter_list) -> bool
+    {
+        if (filter_list.empty())
+        {
+            return false;
+        }
+
+        auto remaining = filter_list;
+
+        for (;;)
+        {
+            auto const pos = remaining.find(',');
+            auto const filter = remaining.substr(0, pos);
+            if (!filter.empty() && data.compare(0, std::size(filter), filter) == 0)
+            {
+                return true;
+            }
+
+            if (pos == std::string_view::npos)
+            {
+                break;
+            }
+
+            remaining = remaining.substr(pos + 1);
+        }
+
+        return false;
+    };
+
+    auto const& include_list = session->peerIdIncludeList();
+    auto const& exclude_list = session->peerIdExcludeList();
+
+    // Both lists are set: exclude list takes priority
+    if (!exclude_list.empty() && !include_list.empty())
+    {
+        tr_logAddTrace(
+            "Both peer_id_include_list and peer_id_exclude_list are set; "
+            "exclude list takes priority and include list is ignored");
+    }
+
+    // If exclude list is not empty, block peers in the list
+    if (!exclude_list.empty())
+    {
+        return matchesFilterList(peer_id_data, exclude_list);
+    }
+
+    // If include list is not empty, only allow peers in the list
+    if (!include_list.empty())
+    {
+        return !matchesFilterList(peer_id_data, include_list);
+    }
+
+    // Neither list exists: don't choke
+    return false;
+}
+
 void create_bit_torrent_peer(
     tr_torrent& tor,
     std::shared_ptr<tr_peerIo> io,
@@ -1346,6 +1406,15 @@ void create_bit_torrent_peer(
 
     TR_ASSERT(swarm->stats.peer_count == swarm->peerCount());
     TR_ASSERT(swarm->stats.peer_from_count[msgs->peer_info->from_first()] <= swarm->stats.peer_count);
+
+    // Check if peer should be filtered based on peer ID include/exclude lists
+    if (peer_id != tr_peer_id_t{} &&
+        shouldChokePeerBasedOnFilters(std::string_view{ peer_id.data(), std::size(peer_id) }, tor.session))
+    {
+        msgs->set_choke(true);
+        msgs->set_filtered(true);
+        tr_logAddTraceSwarm(swarm, fmt::format("Filtering peer {} due to peer ID filter", msgs->peer_info->display_name()));
+    }
 }
 
 /* FIXME: this is kind of a mess. */
@@ -2116,6 +2185,12 @@ void rechokeUploads(tr_swarm* s, uint64_t const now)
         {
             /* choke everyone if we're not uploading */
             peer->set_choke(true);
+        }
+        else if (peer->is_filtered())
+        {
+            /* choke filtered peers; skip unchoke consideration */
+            peer->set_choke(true);
+            continue;
         }
         else if (peer.get() != s->optimistic)
         {
