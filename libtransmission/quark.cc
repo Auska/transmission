@@ -367,6 +367,8 @@ auto constexpr MyStatic = std::array<std::string_view, TR_N_KEYS>{
     "peerIsInterested"sv, // rpc
     "peer_congestion_algorithm"sv, // tr_session::Settings
     "peer_id"sv, // rpc
+    "peer_id_exclude_list"sv,
+    "peer_id_include_list"sv,
     "peer_is_choked"sv, // rpc
     "peer_is_interested"sv, // rpc
     "peer_limit"sv, // rpc

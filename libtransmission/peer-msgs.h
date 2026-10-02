@@ -115,6 +115,24 @@ public:
         is_disconnecting_ = true;
     }
 
+    [[nodiscard]] constexpr auto is_filtered() const noexcept
+    {
+        return is_filtered_;
+    }
+
+    constexpr void set_filtered(bool filtered) noexcept
+    {
+        is_filtered_ = filtered;
+    }
+
+    void clear_filter_if_seed() noexcept
+    {
+        if (peer_info->is_seed())
+        {
+            is_filtered_ = false;
+        }
+    }
+
     [[nodiscard]] virtual tr_socket_address socket_address() const = 0;
 
     virtual void set_choke(bool peer_is_choked) = 0;
@@ -202,6 +220,9 @@ private:
 
     // whether or not we should free this peer soon.
     bool is_disconnecting_ = false;
+
+    // whether or not this peer has been filtered by peer ID lists
+    bool is_filtered_ = false;
 };
 
 /* @} */

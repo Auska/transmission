@@ -471,6 +471,8 @@ public:
         std::string download_dir = tr_getDefaultDownloadDir();
         std::string incomplete_dir = tr_getDefaultDownloadDir();
         std::string peer_congestion_algorithm;
+        std::string peer_id_exclude_list;
+        std::string peer_id_include_list;
         std::string script_torrent_added_filename;
         std::string script_torrent_done_filename;
         std::string script_torrent_done_seeding_filename;
@@ -509,6 +511,8 @@ public:
             Field<&Settings::lpd_enabled>{ TR_KEY_lpd_enabled },
             Field<&Settings::log_level>{ TR_KEY_message_level },
             Field<&Settings::peer_congestion_algorithm>{ TR_KEY_peer_congestion_algorithm },
+            Field<&Settings::peer_id_exclude_list>{ TR_KEY_peer_id_exclude_list },
+            Field<&Settings::peer_id_include_list>{ TR_KEY_peer_id_include_list },
             Field<&Settings::peer_limit_global>{ TR_KEY_peer_limit_global },
             Field<&Settings::peer_limit_per_torrent>{ TR_KEY_peer_limit_per_torrent },
             Field<&Settings::peer_port>{ TR_KEY_peer_port },
@@ -744,6 +748,16 @@ public:
     [[nodiscard]] constexpr auto const& peerCongestionAlgorithm() const noexcept
     {
         return settings().peer_congestion_algorithm;
+    }
+
+    [[nodiscard]] constexpr auto const& peerIdExcludeList() const noexcept
+    {
+        return settings().peer_id_exclude_list;
+    }
+
+    [[nodiscard]] constexpr auto const& peerIdIncludeList() const noexcept
+    {
+        return settings().peer_id_include_list;
     }
 
     void setSocketDiffServ(tr_socket_t sock, tr_address_type type) const
